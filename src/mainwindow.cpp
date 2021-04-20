@@ -77,6 +77,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_totalLines = 0;
     m_desktopDir = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
 
+    //只能输入正整数（不含0）
     ui->lineEdit_docNum->setValidator(new QRegExpValidator(QRegExp("^([1-9][0-9]*)$")));
     ui->lineEdit_lineNum->setValidator(new QRegExpValidator(QRegExp("^([1-9][0-9]*)$")));
 }
@@ -100,9 +101,9 @@ void MainWindow::on_openFileBtn_clicked()
         ui->startSplitBtn->setEnabled(true);
 
         m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
-        if(m_totalLines == 0)
+        if(m_totalLines == 0 || m_totalLines == -1)
         {
-            QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空"));
+            QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
             ui->lineEdit_txt->clear();
             return;
         }
@@ -111,9 +112,6 @@ void MainWindow::on_openFileBtn_clicked()
 
 void MainWindow::on_startSplitBtn_clicked()
 {
-    ui->startSplitBtn->setEnabled(false);
-    m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
-    int linesCount;
     QString inputFile = ui->lineEdit_txt->text();
     if(inputFile.isEmpty() || !inputFile.endsWith(".txt"))
     {
@@ -121,6 +119,9 @@ void MainWindow::on_startSplitBtn_clicked()
         return;
     }
 
+    ui->startSplitBtn->setEnabled(false);
+    m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+    int linesCount;
     if(ui->specifyLinesRB->isChecked())//按行数分割
     {
         linesCount = ui->lineEdit_lineNum->text().toInt();
@@ -212,7 +213,7 @@ int MainWindow::calcTxtTotalLines(QString textFilePath)
     QFile file(textFilePath);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        QMessageBox::warning(this, tr("警告"), tr("无法打开TXT文件!"));
+//        QMessageBox::warning(this, tr("警告"), tr("无法打开TXT文件!"));
         return -1;
     }
 

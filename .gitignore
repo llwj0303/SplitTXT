@@ -33,13 +33,13 @@ Makefile*
 # QtCtreator Qml
 *.qmlproject.user
 *.qmlproject.user.*
+*.qmake.stash
 
 # QtCtreator CMake
 CMakeLists.txt.user*
 
-/code/3rdParty/qsint-properties
-/_builds_qvge_msvc
-/code/makevc.bat
+/src/release/txtout
+
 *.ipch
 *.obj
 *.tlog

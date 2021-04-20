@@ -1,6 +1,6 @@
 #include <windows.h>
 
-IDI_ICON1	ICON	DISCARDABLE	"D:\\LLWJ\\SplitTXT\\icon\\logo.ico"
+IDI_ICON1	ICON	DISCARDABLE	"E:\\SplitTXT\\src\\icon\\logo.ico"
 
 VS_VERSION_INFO VERSIONINFO
 	FILEVERSION 0,0,0,0
