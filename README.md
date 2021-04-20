@@ -1,1 +1,1 @@
-asyunprint is a tool for printing QRcode and Barcodes
+Txt文本分割工具（Qt5.11.0 mingw 32bit static）静态编译版
