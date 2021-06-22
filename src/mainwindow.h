@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QDropEvent>
 #include <QTime>
 
 QT_BEGIN_NAMESPACE
@@ -21,6 +22,10 @@ public:
     QString formatPath(QString path);
     void initOutputTxtDirs(QString path);
     int calcTxtTotalLines(QString textFilePath);
+
+protected:
+    void dropEvent(QDropEvent *event);
+    void dragEnterEvent(QDragEnterEvent *ev);
 
 private slots:
     void splitThreadFinished();

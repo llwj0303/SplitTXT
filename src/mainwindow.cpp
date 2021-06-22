@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QRegExpValidator>
 #include <QTextStream>
+#include <QMimeData>
 #include <QFile>
 #include <QDir>
 #include "mainwindow.h"
@@ -73,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle(tr("TXT文本分割工具"));
+    this->setAcceptDrops(true);
 
     m_totalLines = 0;
     m_desktopDir = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
@@ -232,6 +234,32 @@ int MainWindow::calcTxtTotalLines(QString textFilePath)
 //        }
     }
     return totalLines;
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    QList<QUrl> urls    = event->mimeData()->urls();
+    QString fileName    = urls.first().toLocalFile();
+    ui->lineEdit_txt->setText(fileName);
+    ui->startSplitBtn->setEnabled(true);
+
+    m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
+    if(m_totalLines == 0 || m_totalLines == -1)
+    {
+        QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
+        ui->lineEdit_txt->clear();
+        return;
+    }
+    else
+    {
+        statusBar()->showMessage(tr("文件共%1行").arg(m_totalLines));
+    }
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *ev)
+{
+    if(ev->mimeData()->hasFormat("text/uri-list"))
+        ev->acceptProposedAction();
 }
 
 void MainWindow::on_lineEdit_lineNum_textEdited(const QString &text)
