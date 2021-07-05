@@ -38,167 +38,409 @@
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLineEdit" name="lineEdit_txt">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>70</y>
-      <width>550</width>
-      <height>50</height>
-     </rect>
+   <layout class="QVBoxLayout" name="verticalLayout_5">
+    <property name="leftMargin">
+     <number>50</number>
     </property>
-    <property name="font">
-     <font>
-      <family>微软雅黑</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="styleSheet">
-     <string notr="true"/>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="placeholderText">
-     <string>  在此输入源数据文件路径</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="openFileBtn">
-    <property name="geometry">
-     <rect>
-      <x>590</x>
-      <y>70</y>
-      <width>180</width>
-      <height>50</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>180</width>
-      <height>0</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>180</width>
-      <height>16777215</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>微软雅黑</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>导入源数据</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="startSplitBtn">
-    <property name="geometry">
-     <rect>
-      <x>590</x>
-      <y>420</y>
-      <width>180</width>
-      <height>50</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>180</width>
-      <height>0</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>180</width>
-      <height>16777215</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>微软雅黑</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>开始分割</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="openURL">
-    <property name="geometry">
-     <rect>
-      <x>590</x>
-      <y>480</y>
-      <width>180</width>
-      <height>50</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>180</width>
-      <height>0</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>180</width>
-      <height>16777215</height>
-     </size>
-    </property>
-    <property name="font">
-     <font>
-      <family>微软雅黑</family>
-      <pointsize>12</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>打开路径</string>
-    </property>
-   </widget>
-   <widget class="QWidget" name="">
-    <property name="geometry">
-     <rect>
-      <x>60</x>
-      <y>200</y>
-      <width>571</width>
-      <height>131</height>
-     </rect>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>32</height>
+       </size>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_9">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>9</number>
+       </property>
        <item>
-        <widget class="QRadioButton" name="specifyLinesRB">
+        <spacer name="horizontalSpacer_10">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>617</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="switchBtn">
          <property name="minimumSize">
           <size>
-           <width>0</width>
+           <width>107</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>150</width>
            <height>30</height>
           </size>
          </property>
          <property name="font">
           <font>
            <family>微软雅黑</family>
-           <pointsize>12</pointsize>
+           <pointsize>10</pointsize>
           </font>
          </property>
-         <property name="text">
-          <string>按指定行数分</string>
+         <property name="styleSheet">
+          <string notr="true">.QPushButton#switchBtn{
+        border-style: none;
+        border: 1px solid #ff6666;
+        color: #FFFFFF;
+        padding: 5px;
+        border-radius:5px;
+        background: #ff6666;
+		min-width: 95px;
+}
+
+.QPushButton:hover#switchBtn{
+        background: #ff5566;
+}
+
+.QPushButton:pressed#switchBtn{
+        background: #ff5555;
+}
+
+.QPushButton:disabled#switchBtn{
+        border: 1px solid #ffcccc;
+        background: #ffcccc;
+}</string>
          </property>
-         <property name="checked">
-          <bool>true</bool>
+         <property name="text">
+          <string>切换到查找字串</string>
+         </property>
+         <property name="icon">
+          <iconset resource="qrc.qrc">
+           <normaloff>:/icon/switch.png</normaloff>:/icon/switch.png</iconset>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QWidget" name="specifyLinesWgt" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_6">
+      <item>
+       <widget class="QLineEdit" name="lineEdit_txt">
+        <property name="minimumSize">
+         <size>
+          <width>550</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>550</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>微软雅黑</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="placeholderText">
+         <string>  在此输入源数据文件路径</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="openFileBtn">
+        <property name="minimumSize">
+         <size>
+          <width>107</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>150</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>微软雅黑</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>导入源数据</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_11">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="page">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <property name="topMargin">
+           <number>50</number>
+          </property>
           <item>
-           <widget class="QLabel" name="label_2">
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <widget class="QRadioButton" name="specifyLinesRB">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>微软雅黑</family>
+                <pointsize>12</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>按指定行数分</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="specifyLinesWgt" native="true">
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <item>
+                <widget class="QLabel" name="label_2">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>微软雅黑</family>
+                   <pointsize>12</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>行数：</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_lineNum">
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>100</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>微软雅黑</family>
+                   <pointsize>12</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>100</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QRadioButton" name="averageRB">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>微软雅黑</family>
+                <pointsize>12</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>平均分</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QWidget" name="averageWgt" native="true">
+              <layout class="QHBoxLayout" name="horizontalLayout">
+               <item>
+                <widget class="QLabel" name="label">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>微软雅黑</family>
+                   <pointsize>12</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>份数：</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLineEdit" name="lineEdit_docNum">
+                 <property name="minimumSize">
+                  <size>
+                   <width>100</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>100</width>
+                   <height>16777215</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <family>微软雅黑</family>
+                   <pointsize>12</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>2</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_2">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_8">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>212</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="page_2">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>9</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_5">
+          <item>
+           <widget class="QLabel" name="label_5">
             <property name="minimumSize">
              <size>
               <width>0</width>
-              <height>30</height>
+              <height>40</height>
              </size>
             </property>
             <property name="font">
@@ -208,12 +450,70 @@
              </font>
             </property>
             <property name="text">
-             <string>行数：</string>
+             <string>查找字串：</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_lineNum">
+           <widget class="QLineEdit" name="lineEdit_searchStr">
+            <property name="minimumSize">
+             <size>
+              <width>455</width>
+              <height>40</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_4">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_10">
+          <item>
+           <widget class="QLabel" name="label_6">
+            <property name="minimumSize">
+             <size>
+              <width>115</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>单个PDF页数：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_pages">
             <property name="minimumSize">
              <size>
               <width>100</width>
@@ -233,7 +533,7 @@
              </font>
             </property>
             <property name="text">
-             <string>100</string>
+             <string>200</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -241,7 +541,7 @@
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer">
+           <spacer name="horizontalSpacer_7">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -254,40 +554,15 @@
            </spacer>
           </item>
          </layout>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QRadioButton" name="averageRB">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <family>微软雅黑</family>
-           <pointsize>12</pointsize>
-          </font>
-         </property>
-         <property name="text">
-          <string>平均分</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QWidget" name="averageWgt" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout">
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="label_3">
             <property name="minimumSize">
              <size>
-              <width>0</width>
-              <height>30</height>
+              <width>115</width>
+              <height>0</height>
              </size>
             </property>
             <property name="font">
@@ -297,12 +572,12 @@
              </font>
             </property>
             <property name="text">
-             <string>份数：</string>
+             <string>单页列数：</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_docNum">
+           <widget class="QLineEdit" name="lineEdit_columns">
             <property name="minimumSize">
              <size>
               <width>100</width>
@@ -322,7 +597,7 @@
              </font>
             </property>
             <property name="text">
-             <string>2</string>
+             <string>10</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
@@ -330,7 +605,64 @@
            </widget>
           </item>
           <item>
-           <spacer name="horizontalSpacer_2">
+           <spacer name="horizontalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_4">
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>单页行数：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit_rows">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>100</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>12</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>7</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_5">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -343,12 +675,225 @@
            </spacer>
           </item>
          </layout>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <item>
+           <widget class="QLabel" name="label_13">
+            <property name="minimumSize">
+             <size>
+              <width>140</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>140</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>图标排列顺序：</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="verizonRB">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>纵向优先</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="horizonRB">
+            <property name="minimumSize">
+             <size>
+              <width>100</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="font">
+             <font>
+              <family>微软雅黑</family>
+              <pointsize>11</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>横向优先</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_6">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_result">
+          <property name="minimumSize">
+           <size>
+            <width>140</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>微软雅黑</family>
+            <pointsize>11</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>未搜索到结果，请重试！</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Preferred</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_8">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <item>
+       <spacer name="horizontalSpacer_9">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="startBtn">
+        <property name="minimumSize">
+         <size>
+          <width>107</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>微软雅黑</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>开始分割</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="openDir">
+        <property name="minimumSize">
+         <size>
+          <width>107</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>40</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>微软雅黑</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>打开路径</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -362,6 +907,8 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <resources/>
+ <resources>
+  <include location="qrc.qrc"/>
+ </resources>
  <connections/>
 </ui>

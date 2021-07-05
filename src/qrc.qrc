@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>icon/logo.ico</file>
+        <file>icon/switch.png</file>
     </qresource>
 </RCC>

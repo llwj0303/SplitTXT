@@ -27,5 +27,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RC_ICONS = icon/logo.ico
 
+TARGET = AsyTxtTool
+VERSION = 1.0.0.1
+
 RESOURCES += \
     qrc.qrc
