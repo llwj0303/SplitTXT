@@ -185,29 +185,52 @@ void MainWindow::doWriteSettings(QSettings &settings)
 
 void MainWindow::on_openFileBtn_clicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this,
-                                                    tr("Open Txt"),
-                                                    m_desktopDir,
-                                                    tr("Txt files (*.txt)"));
-    if(!fileName.isEmpty())
+    QStringList fileNameList = QFileDialog::getOpenFileNames(this,
+                                                             tr("Open Txt"),
+                                                             m_desktopDir,
+                                                             tr("Txt files (*.txt)"));
+    if(!fileNameList.isEmpty())
     {
-        ui->lineEdit_txt->setText(fileName);
-        ui->startBtn->setEnabled(true);
-
-        m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
-        QTime stopTime = QTime::currentTime();
-        long elapsed = m_startTime0.msecsTo(stopTime);
-        qDebug("calcTxtTotalLines use time: %ld ms", elapsed);
-
-        if(m_totalLines == 0 || m_totalLines == -1)
+        if (fileNameList.count() == 1)
         {
-            QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
-            ui->lineEdit_txt->clear();
-            return;
+            ui->stackedWidget->setCurrentIndex(0);
+            ui->startBtn->setText(tr("开始分割"));
+
+            ui->lineEdit_txt->setText(fileNameList.at(0));
+            ui->startBtn->setEnabled(true);
+
+            m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
+            QTime stopTime = QTime::currentTime();
+            long elapsed = m_startTime0.msecsTo(stopTime);
+            qDebug("calcTxtTotalLines use time: %ld ms", elapsed);
+
+            if(m_totalLines == 0 || m_totalLines == -1)
+            {
+                QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
+                ui->lineEdit_txt->clear();
+                return;
+            }
+            else
+            {
+                statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
+            }
         }
-        else
+        else if (fileNameList.count() > 1)
         {
-            statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
+            ui->stackedWidget->setCurrentIndex(2);
+            ui->startBtn->setText(tr("开始合并"));
+
+            QString mergeStr;
+            ui->textEdit->clear();
+            for (int i = 0; i < fileNameList.count(); ++i) {
+                mergeStr.append(fileNameList.at(i));
+                ui->textEdit->append(fileNameList.at(i));
+                if (i != fileNameList.count()-1)
+                    mergeStr.append(";");
+            }
+            ui->lineEdit_txt->setText(mergeStr);
+
+            statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
         }
     }
 }
@@ -345,6 +368,33 @@ void MainWindow::on_startBtn_clicked()
         }
 
     }
+    else if (ui->stackedWidget->currentIndex() == 2) // 文件合并
+    {
+        QStringList inputFiles = ui->textEdit->toPlainText().split("\n");
+        qDebug()<<inputFiles;
+        m_startTime2 = QTime::currentTime();
+        m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+        m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
+        isDirExist(m_outDir);
+        m_outDir = formatPath(m_outDir);
+        m_outDir.replace(QRegExp("/$"), "");
+        m_outDir += "/";
+        initOutputTxtDirs(m_outDir);
+        QString outFilename = "mergeTxt.txt";
+        QString outputFullPathStr = m_outDir + outFilename;
+        if (inputFiles.count() > 4)
+        {
+            QMessageBox::warning(this, tr("提示"), tr("请选择1~4个txt文件！"));
+            ui->startBtn->setEnabled(true);
+            return;
+        }
+        mergeTxtFiles(inputFiles, outputFullPathStr);
+        ui->startBtn->setEnabled(true);
+
+        QTime stopTime = QTime::currentTime();
+        long elapsed = m_startTime2.msecsTo(stopTime);
+        statusBar()->showMessage(tr("  合并耗时%1s").arg(elapsed*0.001));
+    }
 }
 
 QString MainWindow::formatPath(QString path) {
@@ -443,6 +493,109 @@ int MainWindow::getLineNumInTxt(QString searchStr)
     }
 
     return targetIndex;
+}
+
+void MainWindow::mergeTxtFiles(QStringList fileList, QString outFilePath)
+{
+    QFile outFile(outFilePath);
+    outFile.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream aStream(&outFile);
+
+    QByteArray tempData1;
+    QByteArray tempData2;
+    QByteArray tempData3;
+    QByteArray tempData4;
+    QStringList line_all1;
+    QStringList line_all2;
+    QStringList line_all3;
+    QStringList line_all4;
+
+    // 间隔1行，交错插入
+    QFile inputFile1, inputFile2, inputFile3, inputFile4;
+    inputFile1.setFileName(fileList.at(0));
+    inputFile1.open(QIODevice::ReadOnly | QIODevice::Text);
+    tempData1 = inputFile1.readAll();
+    line_all1 = QString(tempData1).split("\n");
+    inputFile1.close();
+
+    if (fileList.count() > 1)
+    {
+        inputFile2.setFileName(fileList.at(1));
+        inputFile2.open(QIODevice::ReadOnly | QIODevice::Text);
+        tempData2 = inputFile2.readAll();
+        line_all2 = QString(tempData2).split("\n");
+        inputFile2.close();
+    }
+
+    if (fileList.count() > 2)
+    {
+        inputFile3.setFileName(fileList.at(2));
+        inputFile3.open(QIODevice::ReadOnly | QIODevice::Text);
+        tempData3 = inputFile3.readAll();
+        line_all3 = QString(tempData3).split("\n");
+        inputFile3.close();
+    }
+
+    if (fileList.count() > 3)
+    {
+        inputFile4.setFileName(fileList.at(3));
+        inputFile4.open(QIODevice::ReadOnly | QIODevice::Text);
+        tempData4 = inputFile4.readAll();
+        line_all4 = QString(tempData4).split("\n");
+        inputFile4.close();
+    }
+
+    if (ui->mergeLinesRB->isChecked())
+    {
+        for (int i = 0; i < line_all1.count(); ++i) {
+            aStream << line_all1.at(i);
+            aStream << "\n";
+
+            if (fileList.count() > 1 && line_all2.count() > i)
+            {
+                aStream << line_all2.at(i);
+                aStream << "\n";
+            }
+
+            if (fileList.count() > 2 && line_all3.count() > i)
+            {
+                aStream << line_all3.at(i);
+                aStream << "\n";
+            }
+
+            if (fileList.count() > 3 && line_all4.count() > i)
+            {
+                aStream << line_all4.at(i);
+                aStream << "\n";
+            }
+            QCoreApplication::processEvents(); // 防止界面假死
+        }
+    }
+    else if (ui->mergeAllRB->isChecked())
+    {
+        aStream << tempData1;
+        aStream << "\n";
+
+        if (fileList.count() > 1)
+        {
+            aStream << tempData2;
+            aStream << "\n";
+        }
+
+        if (fileList.count() > 2)
+        {
+            aStream << tempData3;
+            aStream << "\n";
+        }
+
+        if (fileList.count() > 3)
+        {
+            aStream << tempData4;
+            aStream << "\n";
+        }
+    }
+
+    outFile.close();
 }
 
 void MainWindow::closeEvent(QCloseEvent */*event*/)

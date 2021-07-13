@@ -28,6 +28,7 @@ public:
     void initOutputTxtDirs(QString path);
     int calcTxtTotalLines(QString textFilePath);
     int getLineNumInTxt(QString searchStr);
+    void mergeTxtFiles(QStringList fileList, QString outFilePath);
 
 protected:
     void closeEvent(QCloseEvent *event);
