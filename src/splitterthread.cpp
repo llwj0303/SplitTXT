@@ -50,7 +50,7 @@ void SplitterThread::run() {
         lines = 0;
         QString txtIndexStr = "";
         txtIndexStr = txtIndexStr.sprintf("%03d", txtNum++);
-        string outputFullFileName = outputFile + "_" + txtIndexStr.toStdString() + ".txt";
+        string outputFullFileName = outputFile + "_sp" + txtIndexStr.toStdString() + ".txt";
         fstream outFile(outputFullFileName.c_str(), ios::binary | ios::out);
         if (!outFile.is_open()) {
             qFatal("outputTxtFile cannot open file");

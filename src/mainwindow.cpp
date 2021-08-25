@@ -275,11 +275,8 @@ void MainWindow::on_startBtn_clicked()
         m_outDir += "/";
         initOutputTxtDirs(m_outDir);
 
-        QString outFilename = "splitTxt";
-        if (outFilename.trimmed().length() == 0) {
-            QFileInfo info(inputFile);
-            outFilename = info.fileName();
-        }
+        QFileInfo info(inputFile);
+        QString outFilename = info.baseName();
 
         QString outputFullPathStr = m_outDir + outFilename;
         QByteArray inputPathData,outputPathData;
