@@ -1,6 +1,6 @@
-#ifndef SPLITTERTHREAD_H
+﻿#ifndef SPLITTERTHREAD_H
 #define SPLITTERTHREAD_H
-
+// 用git bash 分割是真的快，就是不知道有没有办法使用到该程序
 #include <QThread>
 #include <QDebug>
 #include <QMutex>
