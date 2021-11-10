@@ -294,6 +294,10 @@ void MainWindow::on_openFileBtn_clicked()
 
             statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
         }
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 1) {
+            QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
+            return;
+        }
     }
 }
 
@@ -657,7 +661,12 @@ void MainWindow::mergeTxtFiles(QStringList fileList, QString outFilePath,
                 QCoreApplication::processEvents(); // 防止界面假死
             }
         }
-        else { // 对称交替合并 只支持两个文件合并
+        else { // 非对称交替合并 只支持两个文件合并
+            if (fileList.count() != 2) {
+                QMessageBox::warning(this, tr("错误"), tr("非对称交替合并功能只适用于两个文件的合并"));
+                return;
+            }
+
             if ((line_all1.count() * 1.0 / intervalLinesNum) >= (line_all2.count() * 1.0 / intervalLinesNum2)) {
                 for (int i = 0; i < line_all1.count(); i += intervalLinesNum) {
                     for (int j1 = 0; j1 < intervalLinesNum; ++j1) {
