@@ -121,6 +121,11 @@
            <string>生成序列文本</string>
           </property>
          </item>
+         <item>
+          <property name="text">
+           <string>SQL文件解析</string>
+          </property>
+         </item>
         </widget>
        </item>
       </layout>
@@ -202,7 +207,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="page">
        <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1345,6 +1350,39 @@
           </widget>
          </item>
         </layout>
+       </widget>
+      </widget>
+      <widget class="QWidget" name="page_5">
+       <widget class="QLabel" name="label_15">
+        <property name="geometry">
+         <rect>
+          <x>180</x>
+          <y>330</y>
+          <width>311</width>
+          <height>61</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>微软雅黑</family>
+          <pointsize>16</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>解析成将要插入表格的数据</string>
+        </property>
+       </widget>
+       <widget class="QTextEdit" name="textEdit_sql">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>30</y>
+          <width>701</width>
+          <height>301</height>
+         </rect>
+        </property>
        </widget>
       </widget>
      </widget>

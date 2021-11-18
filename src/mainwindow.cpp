@@ -8,6 +8,7 @@
 #include <QMimeData>
 #include <QFile>
 #include <QDir>
+#include <QTextCodec>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -298,12 +299,17 @@ void MainWindow::on_openFileBtn_clicked()
             QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
             return;
         }
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 4) {
+            ui->lineEdit_txt->setText(fileNameList.at(0));
+            ui->startBtn->setEnabled(true);
+        }
     }
 }
 
 void MainWindow::on_startBtn_clicked()
 {
-    QString inputFile = ui->lineEdit_txt->text();
+    QTextCodec *codec	 = QTextCodec::codecForName("UTF8");
+    QString    inputFile = ui->lineEdit_txt->text();
     if ((inputFile.isEmpty() || !inputFile.endsWith(".txt")) && (ui->stackedWidget->currentIndex() != 3)) {
         QMessageBox::warning(this, tr("提示"), tr("请先选择要操作的txt文件！"));
         return;
@@ -477,6 +483,102 @@ void MainWindow::on_startBtn_clicked()
 
         QString outputFullPathStr = m_outDir + outFilename;
         generateSerialIndexTxt(outputFullPathStr);
+    }
+    else if (ui->stackedWidget->currentIndex() == 4) {
+        m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+        int linesCount;
+        m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
+        isDirExist(m_outDir);
+        if (m_outDir.trimmed().length() == 0) {
+            QString   inDir = ui->lineEdit_txt->text();
+            QFileInfo info(inDir);
+            m_outDir = info.absolutePath();
+        }
+
+        m_outDir = formatPath(m_outDir);
+        m_outDir.replace(QRegExp("/$"), "");
+        m_outDir += "/";
+        initOutputTxtDirs(m_outDir);
+
+        QString outFilename = m_outDir + "SQL_Analysis.txt";
+
+        QFile outfile(outFilename);
+        if (!outfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QMessageBox::critical(NULL, "提示", "无法创建文件");
+            return;
+        }
+        QTextStream out(&outfile);
+
+        QFile txtFile(inputFile);
+        if (!txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qCritical() << "Can't open the txt file: " << inputFile;
+            return;
+        }
+
+        QTextStream stream(&txtFile);
+        stream.seek(0);
+        QString line_in;
+        int	qrNum	    = 0;
+        bool	isValueable = false;
+        while (!stream.atEnd()) {
+            line_in = stream.readLine();
+            if ((!line_in.isEmpty()) && line_in.contains("CREATE TABLE ", Qt::CaseSensitive)) {
+                isValueable = true;
+                out << "************************\n";
+                qDebug() << "************************\n";
+                ui->textEdit_sql->append("************************\n");
+                QStringList lineStrList = line_in.split(" ");
+                for (int i = 0; i < lineStrList.count(); ++i) {
+                    QByteArray by   = lineStrList.at(i).toLocal8Bit();
+                    QString    cStr = codec->toUnicode(by);
+                    if (cStr.startsWith("`")) {
+                        QString explainStr = cStr.remove("`");
+                        qDebug() << explainStr << "\n";
+                        out << explainStr << "\n";
+                        ui->textEdit_sql->append(explainStr);
+                    }
+                }
+                continue;
+            }
+            else if ((!line_in.isEmpty()) && line_in.contains("PRIMARY KEY ", Qt::CaseSensitive)) {
+                isValueable = false;
+                qDebug() << "************************\n";
+                out << "************************\n";
+                ui->textEdit_sql->append("************************\n");
+            }
+
+            if (isValueable) {
+                int	    startIndex	= 0;
+                QStringList lineStrList = line_in.split(" ");
+                for (int i = 0; i < lineStrList.count(); ++i) {
+                    QByteArray by   = lineStrList.at(i).toLocal8Bit();
+                    QString    cStr = codec->toUnicode(by);
+                    if (cStr.startsWith("`")) {
+                        startIndex = i;
+                        QString explainStr = cStr.remove("`");
+                        out << explainStr.toUpper() << "\t\t";
+                    }
+                    if (i == startIndex + 1) {
+                        out << cStr.toUpper();
+                    }
+
+                    // 说明（部分中文？？）
+                    if (cStr.startsWith("'")) {
+                        QString explainStr = cStr.remove("'");
+                        qDebug() << explainStr.remove(",");
+                        ui->textEdit_sql->append(explainStr.remove(","));
+                    }
+                }
+                out << "\n";
+            }
+            qrNum++;
+        }
+
+        qDebug() << "******qrNum " << qrNum;
+        out << endl;
+        out.flush();
+        outfile.close();
+        m_startTime = QTime::currentTime();
     }
 }
 
@@ -873,6 +975,13 @@ void MainWindow::on_switchComboBox_currentIndexChanged(int index)
     {
         ui->switchComboBox->setCurrentText(tr("生成序列文本"));
         ui->startBtn->setText(tr("开始生成"));
+    }
+    break;
+
+    case 4: // sql简单解析
+    {
+        ui->switchComboBox->setCurrentText(tr("SQL文件解析"));
+        ui->startBtn->setText(tr("开始解析"));
     }
     break;
 
