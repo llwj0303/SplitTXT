@@ -9,6 +9,10 @@
 #include <QFile>
 #include <QDir>
 #include <QTextCodec>
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -94,6 +98,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lineEdit_columns->setValidator(new QRegExpValidator(QRegExp("^([1-9][0-9]*)$")));
     ui->lineEdit_rows->setValidator(new QRegExpValidator(QRegExp("^([1-9][0-9]*)$")));
 
+    //只能输入正整数（含0）
+    ui->lineEdit_strInsertPos->setValidator(new QRegExpValidator(QRegExp("^([0-9][0-9]*)$")));
+
     ui->label_result->clear();
     ui->widget_asymmetric->setVisible(false);
 
@@ -172,12 +179,36 @@ void MainWindow::doReadSettings(QSettings &settings)
 
     // 生成序列文本
     settings.beginGroup("UI/GenerateIndexTxt");
+    int productID = settings.value("productID", 0).toInt();
+    ui->lineEdit_productID->setText(QString::number(productID));
     int totalRows = settings.value("totalRows", 10000).toInt();
     ui->lineEdit_totalRows->setText(QString::number(totalRows));
     int rowsPerPage = settings.value("rowsPerPage", 10).toInt();
     ui->lineEdit_rowsPerPage->setText(QString::number(rowsPerPage));
     int startIndex = settings.value("startIndex", 1).toInt();
     ui->lineEdit_startIndex->setText(QString::number(startIndex));
+    int serialLength = settings.value("serialLength", 12).toInt();
+    ui->lineEdit_serialLength->setText(QString::number(serialLength));
+    settings.endGroup();
+
+    // 逐行添加字符
+    settings.beginGroup("UI/AddTextChars");
+    bool isAppendSerial = settings.value("isAppendSerial", true).toBool();
+    ui->groupBox_serialAppend->setChecked(isAppendSerial);
+    int serialLengthAdded = settings.value("serialLengthAdded", 8).toInt();
+    ui->comboBox_serialNumLength->setCurrentText(QString::number(serialLengthAdded));
+    QString preFix = settings.value("preFix").toString();
+    ui->lineEdit_preFix->setText(preFix);
+    QString startSerialNum = settings.value("startSerialNum").toString();
+    ui->lineEdit_startSerialNum->setText(startSerialNum);
+    QString subFix = settings.value("subFix").toString();
+    ui->lineEdit_subFix->setText(subFix);
+    bool isPlusOne = settings.value("isPlusOne").toBool();
+    ui->radioButton_plusOne->setChecked(isPlusOne);
+    bool isStringInsert = settings.value("isStringInsert").toBool();
+    ui->groupBox_stringInsert->setChecked(isStringInsert);
+    QString strInsertPos = settings.value("strInsertPos").toString();
+    ui->lineEdit_strInsertPos->setText(strInsertPos);
     settings.endGroup();
 }
 
@@ -220,12 +251,37 @@ void MainWindow::doWriteSettings(QSettings &settings)
 
     // 生成序列文本
     settings.beginGroup("UI/GenerateIndexTxt");
+    int productID = ui->lineEdit_productID->text().toInt();
+    settings.setValue("productID", productID);
     int totalRows = ui->lineEdit_totalRows->text().toInt();
     settings.setValue("totalRows", totalRows);
     int rowsPerPage = ui->lineEdit_rowsPerPage->text().toInt();
     settings.setValue("rowsPerPage", rowsPerPage);
     int startIndex = ui->lineEdit_startIndex->text().toInt();
     settings.setValue("startIndex", startIndex);
+    int serialLength = ui->lineEdit_serialLength->text().toInt();
+    settings.setValue("serialLength", serialLength);
+    settings.endGroup();
+
+    // 逐行添加字符
+    settings.beginGroup("UI/AddTextChars");
+    bool isAppendSerial = ui->groupBox_serialAppend->isChecked(); // 是否尾部添加序列号
+    settings.setValue("isAppendSerial", isAppendSerial);
+    int serialLengthAdded = ui->comboBox_serialNumLength->currentText().toInt();
+    settings.setValue("serialLengthAdded", serialLengthAdded);
+    QString preFix = ui->lineEdit_preFix->text();
+    settings.setValue("preFix", preFix);
+    int startSerialNum = ui->lineEdit_startSerialNum->text().toInt();
+    settings.setValue("startSerialNum", startSerialNum);
+    QString subFix = ui->lineEdit_subFix->text();
+    settings.setValue("subFix", subFix);
+    bool isPlusOne = ui->radioButton_plusOne->isChecked();// 是否自增1，false则追加固定序列号
+    settings.setValue("isPlusOne", isPlusOne);
+
+    bool isStringInsert = ui->groupBox_stringInsert->isChecked(); // 是否指定位置插入固定字符（尾部添加固定字符的扩展）
+    settings.setValue("isStringInsert", isStringInsert);
+    int strInsertPos = ui->lineEdit_strInsertPos->text().toInt();
+    settings.setValue("strInsertPos", strInsertPos);
     settings.endGroup();
 }
 
@@ -236,7 +292,7 @@ void MainWindow::on_openFileBtn_clicked()
                                                              m_desktopDir,
                                                              tr("Txt files (*.txt)"));
     if (!fileNameList.isEmpty()) {
-        if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 0) {
+        if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 0) { // 文件分割
             ui->stackedWidget->setCurrentIndex(0);
             ui->startBtn->setText(tr("开始分割"));
 
@@ -257,7 +313,31 @@ void MainWindow::on_openFileBtn_clicked()
                 statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
             }
         }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 3) {
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 1) { // 合并文本
+            QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
+            return;
+        }
+        else if (fileNameList.count() > 1) { // 合并文本
+            on_switchComboBox_currentIndexChanged(1);
+
+            QString mergeStr;
+            ui->textEdit->clear();
+            for (int i = 0; i < fileNameList.count(); ++i) {
+                mergeStr.append(fileNameList.at(i));
+                ui->textEdit->append(fileNameList.at(i));
+                if (i != fileNameList.count() - 1) {
+                    mergeStr.append(";");
+                }
+            }
+            ui->lineEdit_txt->setText(mergeStr);
+
+            statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
+        }
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 2) { // 查找字串
+            ui->lineEdit_txt->setText(fileNameList.at(0));
+            ui->startBtn->setEnabled(true);
+        }
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 3) { // 生成序列文本
             ui->stackedWidget->setCurrentIndex(3);
             ui->startBtn->setText(tr("开始生成"));
 
@@ -279,29 +359,32 @@ void MainWindow::on_openFileBtn_clicked()
                 statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
             }
         }
-        else if (fileNameList.count() > 1) {
-            on_switchComboBox_currentIndexChanged(1);
-
-            QString mergeStr;
-            ui->textEdit->clear();
-            for (int i = 0; i < fileNameList.count(); ++i) {
-                mergeStr.append(fileNameList.at(i));
-                ui->textEdit->append(fileNameList.at(i));
-                if (i != fileNameList.count() - 1) {
-                    mergeStr.append(";");
-                }
-            }
-            ui->lineEdit_txt->setText(mergeStr);
-
-            statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
-        }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 1) {
-            QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
-            return;
-        }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 4) {
+        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 4) { // SQL文件解析
             ui->lineEdit_txt->setText(fileNameList.at(0));
             ui->startBtn->setEnabled(true);
+        }
+        else if ((fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 5) || // 逐行添加字符
+                 (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 6)) { // 字段位置交换
+            ui->stackedWidget->setCurrentIndex(ui->stackedWidget->currentIndex());
+            ui->startBtn->setText(tr("开始运行"));
+
+            ui->lineEdit_txt->setText(fileNameList.at(0));
+            ui->startBtn->setEnabled(true);
+
+            m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
+            QTime stopTime = QTime::currentTime();
+            long  elapsed  = m_startTime0.msecsTo(stopTime);
+            qDebug("calcTxtTotalLines use time: %ld ms", elapsed);
+
+            if (m_totalLines == 0 || m_totalLines == -1) {
+                QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
+                ui->lineEdit_txt->clear();
+                return;
+            }
+            else {
+                ui->lineEdit_totalRows->setText(QString::number(m_totalLines));
+                statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
+            }
         }
     }
 }
@@ -324,7 +407,7 @@ void MainWindow::on_startBtn_clicked()
             linesCount = ui->lineEdit_lineNum->text().toInt();
         }
         else {// 平均分割
-              //计算txt总行数，向前进位
+            //计算txt总行数，向前进位
             float docNum      = ui->lineEdit_docNum->text().toFloat();
             int	  perDocLines = ceil(m_totalLines / docNum);
             linesCount = perDocLines == 0 ? 1 : perDocLines;
@@ -484,7 +567,7 @@ void MainWindow::on_startBtn_clicked()
         QString outputFullPathStr = m_outDir + outFilename;
         generateSerialIndexTxt(outputFullPathStr);
     }
-    else if (ui->stackedWidget->currentIndex() == 4) {
+    else if (ui->stackedWidget->currentIndex() == 4) { // SQL文件解析
         m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
         int linesCount;
         m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
@@ -579,7 +662,179 @@ void MainWindow::on_startBtn_clicked()
         out.flush();
         outfile.close();
         m_startTime = QTime::currentTime();
+        ui->startBtn->setEnabled(true);
     }
+    else if (ui->stackedWidget->currentIndex() == 5) { // 逐行添加字符
+        // 创建输出文件并打开
+        m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+        m_outDir	 = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
+        isDirExist(m_outDir);
+        if (m_outDir.trimmed().length() == 0) {
+            QString   inDir = ui->lineEdit_txt->text();
+            QFileInfo info(inDir);
+            m_outDir = info.absolutePath();
+        }
+        m_outDir = formatPath(m_outDir);
+        m_outDir.replace(QRegExp("/$"), "");
+        m_outDir += "/";
+        initOutputTxtDirs(m_outDir);
+        QString outFilename = m_outDir + "已逐行添加字符Txt.txt";
+        QFile	outfile(outFilename);
+        if (!outfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QMessageBox::critical(NULL, "提示", "无法创建文件");
+            return;
+        }
+        QTextStream out(&outfile);
+
+        // 打开输入文件
+        QFile txtFile(inputFile);
+        if (!txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qCritical() << "Can't open the input txt file: " << inputFile;
+            return;
+        }
+        QTextStream stream(&txtFile);
+        stream.seek(0);
+        QString line_in;
+        int	qrNum	= 0;
+        bool	isError = false;
+
+        bool isSerialAppend = ui->groupBox_serialAppend->isChecked(); // 是否选择的是追加序列号，false则为指定索引添加字符
+
+        int	serialNumLength = ui->comboBox_serialNumLength->currentText().toInt();
+        QString startSerialStr	= ui->lineEdit_startSerialNum->text();
+        QString preFixStr	= ui->lineEdit_preFix->text();
+        QString subFixStr	= ui->lineEdit_subFix->text();
+        bool	isPlusOnebyOne	= ui->radioButton_plusOne->isChecked();
+
+        uint indexPos = ui->lineEdit_strInsertPos->text().toInt();
+        if (ui->lineEdit_strInsertPos->text().isEmpty()) {
+            indexPos = 0;
+        }
+        QString insertString = ui->lineEdit_strInsert->text();
+
+        while (!stream.atEnd()) {
+            line_in = stream.readLine();
+            if ((!line_in.isEmpty())) {
+                if (isSerialAppend) { // 追加序列号模式
+                    out << line_in;
+                    // 每行尾部要逐行追加的字符
+                    qlonglong serialNum;
+                    if (isPlusOnebyOne) {
+                        serialNum = startSerialStr.toInt() + qrNum;
+                    }
+                    else {
+                        serialNum = startSerialStr.toInt();
+                    }
+                    QString appendStr = QString("%1").arg(serialNum, serialNumLength, 10, QLatin1Char('0'));
+                    out << "," << preFixStr << appendStr << subFixStr;
+                    out << "\n";
+                }
+                else {                                                                     // 指定索引添加字符模式
+                    if (indexPos >= line_in.length()) {
+                        QMessageBox::information(NULL, "提示", "索引越界，请重新设置！");
+                        ui->lineEdit_strInsertPos->setFocus();
+                        isError = true;
+                        break;
+                    }
+                    QString line_in_fix = QString(line_in).insert(indexPos, insertString); // TODO 索引越界校验
+                    out << line_in_fix;
+                    out << "\n";
+                }
+            }
+            qrNum++;
+            QCoreApplication::processEvents(); // 防止界面假死
+        }
+
+        if (!isError) {
+            out << endl;
+            out.flush();
+            outfile.close();
+            QMessageBox::information(NULL, "提示", "追加字符完成！");
+        }
+
+        ui->startBtn->setEnabled(true);
+    }
+    else if (ui->stackedWidget->currentIndex() == 6) { // 字段位置交换
+        changeSourceLinePos(inputFile);
+    }
+}
+
+///! TODOTODO 字段位置交换
+//! \brief MainWindow::changeSourceLinePos
+//! \param inputFile
+//!
+void MainWindow::changeSourceLinePos(QString inputFile)
+{
+    // 创建输出文件并打开
+    m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+    m_outDir	     = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
+    isDirExist(m_outDir);
+    if (m_outDir.trimmed().length() == 0) {
+        QString	  inDir = ui->lineEdit_txt->text();
+        QFileInfo info(inDir);
+        m_outDir = info.absolutePath();
+    }
+    m_outDir = formatPath(m_outDir);
+    m_outDir.replace(QRegExp("/$"), "");
+    m_outDir += "/";
+    initOutputTxtDirs(m_outDir);
+    QString outFilename = m_outDir + QString("已交换字段_%1.txt").arg(m_createDateTime);
+    QFile   outfile(outFilename);
+    if (!outfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::critical(NULL, "提示", "无法创建文件");
+        return;
+    }
+    QTextStream out(&outfile);
+
+    // 打开输入文件
+    QFile txtFile(inputFile);
+    if (!txtFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qCritical() << "Can't open the input txt file: " << inputFile;
+        return;
+    }
+
+    QString splitChar		  = ui->lineEdit_splitChar->text().isEmpty() ? "," : ui->lineEdit_splitChar->text();
+    int	    indexPartsToExchange  = ui->comboBox_dataParts->currentIndex(); //5
+    int	    indexPartToPlaceAfter = ui->comboBox_placePos->currentIndex();  // index 0 添加了“起始位置”项
+
+    QTextStream stream(&txtFile);
+    stream.seek(0);
+    QString line_in;
+    int	    qrNum   = 0;
+    bool    isError = false;
+
+    while (!stream.atEnd()) {
+        line_in = stream.readLine();
+        if ((!line_in.isEmpty())) {
+            QStringList lineInList    = line_in.split(splitChar);
+            QString	tempPartChars = lineInList.at(indexPartsToExchange);
+            lineInList.removeAt(indexPartsToExchange);
+            lineInList.insert(indexPartToPlaceAfter, tempPartChars);
+
+            QString line_in_fix = "";
+            for (int index = 0; index < lineInList.count(); index++) {
+                line_in_fix.append(lineInList.at(index));
+                line_in_fix.append(splitChar);
+            }
+
+            if (line_in_fix.right(1) == splitChar) {
+                line_in_fix.remove(line_in.length(), 1);
+            }
+            out << line_in_fix;
+            out << "\n";
+        }
+        qrNum++;
+        QCoreApplication::processEvents(); // 防止界面假死
+    }
+
+    if (!isError) {
+        out << endl;
+        out.flush();
+        outfile.close();
+        QMessageBox::information(NULL, "提示", "交换字段完成！");
+    }
+
+    ui->startBtn->setEnabled(true);
 }
 
 QString MainWindow::formatPath(QString path)
@@ -627,17 +882,30 @@ int MainWindow::calcTxtTotalLines(QString textFilePath)
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return (-1);
     }
+
+    QTextStream stream(&file);
+    if (ui->stackedWidget->currentIndex() == 6) {
+        QString splitChar = ui->lineEdit_splitChar->text().isEmpty() ? "," : ui->lineEdit_splitChar->text();
+        stream.seek(0);
+        QString line_first = stream.readLine();
+        m_lineInList.clear();
+        m_lineInList   = line_first.split(splitChar);
+        m_firstPartStr = m_lineInList.at(0);
+        ui->comboBox_dataParts->clear();
+        ui->comboBox_dataParts->addItems(m_lineInList);
+        ui->comboBox_placePos->clear();
+        m_lineInList.replace(0, "起始位置");
+        ui->comboBox_placePos->addItems(m_lineInList);
+    }
+
     int totalLines = 0;
-    while (!file.atEnd()) {
-        QByteArray line = file.readLine();
-        QString	   line_in(line);
-        if (!line_in.isEmpty()) { // 通用
+    stream.seek(0);
+    QString line_in;
+    while (!stream.atEnd()) {
+        line_in = stream.readLine();
+        if (!line_in.isEmpty()) {
             totalLines++;
         }
-//        if((!line_in.isEmpty()) && line_in.contains("://"))
-//        {
-//            totalLines++;
-//        }
         QCoreApplication::processEvents(); // 防止界面假死
     }
 
@@ -816,6 +1084,12 @@ void MainWindow::mergeTxtFiles(QStringList fileList, QString outFilePath,
         aStream << tempData1;
         aStream << "\n";
 
+        // 间隔取值，去重
+        //        for (int i = 0; i < line_all1.count(); i += 30) {
+        //            aStream << line_all1.at(i);
+        //            aStream << "\n";
+        //        }
+
         if (fileList.count() > 1) {
             aStream << tempData2;
             aStream << "\n";
@@ -842,16 +1116,47 @@ void MainWindow::generateSerialIndexTxt(QString fileName)
     outFile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream aStream(&outFile);
 
+    QString productIDStr;
+    bool    isHasProductID = !ui->lineEdit_productID->text().isEmpty() && ui->lineEdit_productID->text().toInt() != 0;
+    if (isHasProductID) {
+        productIDStr = QString("%1").arg(ui->lineEdit_productID->text().toInt(), 6, 10, QLatin1Char('0')); // 产品编号批次6位 不够前面补0
+    }
+    else {
+        productIDStr = "";
+    }
+
     QString startIndexStr = ui->lineEdit_startIndex->text();
     int	    startIndex	  = startIndexStr.isEmpty() ? 1 : startIndexStr.toInt();
     int	    interalCount  = ui->lineEdit_rowsPerPage->text().toInt();
     int	    totalRowsNum  = ui->lineEdit_totalRows->text().toInt();
+    int	    serialLength  = ui->lineEdit_serialLength->text().toInt();
 
-    int rowNum = 0;
+    QString suffixStr = ui->lineEdit_suffix->text();
 
+    if (isHasProductID && serialLength < 7) {
+        QMessageBox::warning(this, tr("错误"), tr("有产品编号批次时，序列号长度必须大于7！"));
+        ui->startBtn->setEnabled(true);
+        return;
+    }
+
+    int	 rowNum	     = 0;
+    bool justPlusOne = serialLength == 0; //序列号长度设置为0时表示自然数自增+1
+
+    qDebug() << "*******isHasProductID " << isHasProductID;
     do {
         for (int index = 0; index < interalCount; ++index) {
-            aStream << QString::number(startIndex);
+            if (justPlusOne) {
+                aStream << QString::number(startIndex);
+            }
+            else {
+                if (isHasProductID) {
+                    aStream << productIDStr + QString("%1").arg(startIndex, serialLength - 6, 10, QLatin1Char('0')) + suffixStr;
+                }
+                else {
+                    aStream << QString("%1").arg(startIndex, serialLength, 10, QLatin1Char('0')) + suffixStr;
+                }
+            }
+
             aStream << "\n";
             rowNum++;
         }
@@ -862,7 +1167,7 @@ void MainWindow::generateSerialIndexTxt(QString fileName)
 
     outFile.close();
 
-    statusBar()->showMessage(tr(" Txt文件生成成功"));
+    statusBar()->showMessage(tr(" 序列号Txt文件生成成功"));
     ui->startBtn->setEnabled(true);
 }
 
@@ -985,6 +1290,13 @@ void MainWindow::on_switchComboBox_currentIndexChanged(int index)
     }
     break;
 
+    case 5: // 逐行添加字符
+    {
+        ui->switchComboBox->setCurrentText(tr("逐行添加字符"));
+        ui->startBtn->setText(tr("开始运行"));
+    }
+    break;
+
     default:
         break;
     }
@@ -996,7 +1308,38 @@ void MainWindow::on_lineEdit_IntervalLinesNum_textEdited(const QString &text)
     ui->lineEdit_IntervalLinesNum->setText(text);
 }
 
+// 非对称合并
 void MainWindow::on_checkBox_asymmetric_stateChanged(int state)
 {
     ui->widget_asymmetric->setVisible(state);
+}
+
+void MainWindow::on_groupBox_serialAppend_clicked(bool checked)
+{
+    ui->widget_serialAppend->setEnabled(checked);
+
+    ui->groupBox_stringInsert->setChecked(!checked);
+    ui->widget_stringInsert->setEnabled(!checked);
+}
+
+void MainWindow::on_groupBox_stringInsert_clicked(bool checked)
+{
+    ui->widget_stringInsert->setEnabled(checked);
+
+    ui->groupBox_serialAppend->setChecked(!checked);
+    ui->widget_serialAppend->setEnabled(!checked);
+}
+
+void MainWindow::on_comboBox_dataParts_currentIndexChanged(int index)
+{
+    ui->comboBox_dataParts->setCurrentIndex(index);
+
+    ui->comboBox_placePos->clear();
+    QStringList lineInList = m_lineInList;
+    if (index != 0) {
+        lineInList.removeAt(index);
+        lineInList.insert(1, m_firstPartStr);// 起始位置后面
+    }
+
+    ui->comboBox_placePos->addItems(lineInList);
 }

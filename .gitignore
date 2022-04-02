@@ -38,7 +38,7 @@ Makefile*
 # QtCtreator CMake
 CMakeLists.txt.user*
 
-/src/release/txtout
+/src/release/
 
 *.ipch
 *.obj

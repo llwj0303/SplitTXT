@@ -5,6 +5,10 @@
 #include <QDropEvent>
 #include <QTime>
 #include <QSettings>
+#include <QTextStream>
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -33,6 +37,7 @@ public:
     void mergeTxtFiles(QStringList fileList, QString outFilePath,
                        int intervalLinesNum = 1, int intervalLinesNum2 = 1);
     void generateSerialIndexTxt(QString fileName);
+    void changeSourceLinePos(QString inputFile);
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -58,8 +63,17 @@ private slots:
 
     void on_checkBox_asymmetric_stateChanged(int arg1);
 
+    void on_groupBox_serialAppend_clicked(bool checked);
+
+    void on_groupBox_stringInsert_clicked(bool checked);
+
+    void on_comboBox_dataParts_currentIndexChanged(int index);
+
 private:
     Ui::MainWindow *ui;
+
+    QSqlDatabase database;
+    QSqlQuery sql_query;
 
     QTime m_startTime0;
     QTime m_startTime;
@@ -72,5 +86,7 @@ private:
     QString m_createDateTime;
     int m_totalLines;
     int m_intervalLinesNum;
+    QStringList m_lineInList;
+    QString m_firstPartStr;
 };
 #endif // MAINWINDOW_H
