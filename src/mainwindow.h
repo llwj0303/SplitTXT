@@ -35,9 +35,14 @@ public:
     int calcTxtTotalLines(QString textFilePath);
     int getLineNumInTxt(QString searchStr);
     void mergeTxtFiles(QStringList fileList, QString outFilePath,
+                       bool bIsMergeByLines, bool bIsNotSameInterval,
                        int intervalLinesNum = 1, int intervalLinesNum2 = 1);
     void generateSerialIndexTxt(QString fileName);
     void changeSourceLinePos(QString inputFile);
+
+    void splitTxtFile(QString inputFile, int linesCount, bool isSplitOnly2File);
+    QStringList scanSplitTxtFold(const QString &scanDirStr);
+    void doDealWithRollJob();
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -61,13 +66,19 @@ private slots:
 
     void on_lineEdit_IntervalLinesNum_textEdited(const QString &text);
 
-    void on_checkBox_asymmetric_stateChanged(int arg1);
+    void on_checkBox_notSameInterval_stateChanged(int arg1);
 
     void on_groupBox_serialAppend_clicked(bool checked);
 
     void on_groupBox_stringInsert_clicked(bool checked);
 
     void on_comboBox_dataParts_currentIndexChanged(int index);
+
+    void on_checkBox_IsFromEnd_stateChanged(int arg1);
+
+    void on_checkBox_isReverse_stateChanged(int arg1);
+
+    void on_checkBox_isOnly2_stateChanged(int arg1);
 
 private:
     Ui::MainWindow *ui;
@@ -88,5 +99,9 @@ private:
     int m_intervalLinesNum;
     QStringList m_lineInList;
     QString m_firstPartStr;
+    bool m_isIndexFromEnd;
+    bool m_isSerialReverse;
+    bool m_dealWithRollJob = false;
+    bool m_isSplitOnly2File;
 };
 #endif // MAINWINDOW_H

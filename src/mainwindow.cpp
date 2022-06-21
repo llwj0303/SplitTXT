@@ -88,8 +88,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->lineEdit_IntervalLinesNum->setValidator(new QRegExpValidator(QRegExp("[0-9]+$")));
 
-    m_totalLines = 0;
-    m_desktopDir = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+    m_isSerialReverse = false;
+    m_totalLines      = 0;
+    m_desktopDir      = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
     ui->stackedWidget->setCurrentIndex(0);
 
     //只能输入正整数（不含0）
@@ -126,6 +127,7 @@ QSettings &MainWindow::getApplicationSettings() const
 void MainWindow::doReadSettings(QSettings &settings)
 {
     // UI elements
+    // 文本分割
     settings.beginGroup("UI/SplitTxt");
     bool isSplitByLines = settings.value("isSplitByLines", true).toBool();
     if (isSplitByLines) {
@@ -138,6 +140,8 @@ void MainWindow::doReadSettings(QSettings &settings)
     ui->lineEdit_lineNum->setText(QString::number(splitLineNum));
     int splitDocNum = settings.value("splitDocNum", 2).toInt();
     ui->lineEdit_docNum->setText(QString::number(splitDocNum));
+    bool isSplitOnly2File = settings.value("isSplitOnly2File", false).toBool();
+    ui->checkBox_isOnly2->setChecked(isSplitOnly2File);
     settings.endGroup();
 
     // 文本合并
@@ -149,7 +153,7 @@ void MainWindow::doReadSettings(QSettings &settings)
         ui->lineEdit_IntervalLinesNum->setText(QString::number(intervalLinesNum));
 
         bool isAsymmetric = settings.value("isAsymmetric", false).toBool();
-        ui->checkBox_asymmetric->setChecked(isAsymmetric);
+        ui->checkBox_notSameInterval->setChecked(isAsymmetric);
         if (isAsymmetric) {
             int intervalLinesNum2 = settings.value("intervalLinesNum2", 1).toInt();
             ui->lineEdit_IntervalLinesNum_2->setText(QString::number(intervalLinesNum2));
@@ -189,6 +193,8 @@ void MainWindow::doReadSettings(QSettings &settings)
     ui->lineEdit_startIndex->setText(QString::number(startIndex));
     int serialLength = settings.value("serialLength", 12).toInt();
     ui->lineEdit_serialLength->setText(QString::number(serialLength));
+    bool isSerialReverse = settings.value("isSerialReverse", false).toBool();
+    ui->checkBox_isReverse->setChecked(isSerialReverse);
     settings.endGroup();
 
     // 逐行添加字符
@@ -209,6 +215,16 @@ void MainWindow::doReadSettings(QSettings &settings)
     ui->groupBox_stringInsert->setChecked(isStringInsert);
     QString strInsertPos = settings.value("strInsertPos").toString();
     ui->lineEdit_strInsertPos->setText(strInsertPos);
+    bool isIndexFromEnd = settings.value("isIndexFromEnd").toBool();
+    ui->checkBox_IsFromEnd->setChecked(isIndexFromEnd);
+    settings.endGroup();
+
+    //卷装数据处理
+    settings.beginGroup("UI/DealWithRollJob");
+    int singleRollNum = settings.value("singleRollNum", 5000).toInt();
+    ui->lineEdit_singleRollNum->setText(QString::number(singleRollNum));
+    int pageRowsNum = settings.value("pageRowsNum", 7).toInt();
+    ui->lineEdit_pageRowsNum->setText(QString::number(pageRowsNum));
     settings.endGroup();
 }
 
@@ -223,6 +239,8 @@ void MainWindow::doWriteSettings(QSettings &settings)
     settings.setValue("splitLineNum", splitLineNum);
     int splitDocNum = ui->lineEdit_docNum->text().toInt();
     settings.setValue("splitDocNum", splitDocNum);
+    bool isSplitOnly2File = ui->checkBox_isOnly2->isChecked();
+    settings.setValue("isSplitOnly2File", isSplitOnly2File);
     settings.endGroup();
 
     // 文本合并
@@ -231,7 +249,7 @@ void MainWindow::doWriteSettings(QSettings &settings)
     settings.setValue("isInteralMerge", isInteralMerge);
     int intervalLinesNum = ui->lineEdit_IntervalLinesNum->text().toInt();
     settings.setValue("intervalLinesNum", intervalLinesNum);
-    bool isAsymmetric = ui->checkBox_asymmetric->isChecked();
+    bool isAsymmetric = ui->checkBox_notSameInterval->isChecked();
     settings.setValue("isAsymmetric", isAsymmetric);
     int intervalLinesNum2 = ui->lineEdit_IntervalLinesNum_2->text().toInt();
     settings.setValue("intervalLinesNum2", intervalLinesNum2);
@@ -261,6 +279,8 @@ void MainWindow::doWriteSettings(QSettings &settings)
     settings.setValue("startIndex", startIndex);
     int serialLength = ui->lineEdit_serialLength->text().toInt();
     settings.setValue("serialLength", serialLength);
+    bool isSerialReverse = ui->checkBox_isReverse->isChecked();
+    settings.setValue("isSerialReverse", isSerialReverse);
     settings.endGroup();
 
     // 逐行添加字符
@@ -282,6 +302,16 @@ void MainWindow::doWriteSettings(QSettings &settings)
     settings.setValue("isStringInsert", isStringInsert);
     int strInsertPos = ui->lineEdit_strInsertPos->text().toInt();
     settings.setValue("strInsertPos", strInsertPos);
+    bool isIndexFromEnd = ui->checkBox_IsFromEnd->isChecked();
+    settings.setValue("isIndexFromEnd", isIndexFromEnd);
+    settings.endGroup();
+
+    //卷装数据处理
+    settings.beginGroup("UI/DealWithRollJob");
+    int singleRollNum = ui->lineEdit_singleRollNum->text().toInt();
+    settings.setValue("singleRollNum", singleRollNum);
+    int pageRowsNum = ui->lineEdit_pageRowsNum->text().toInt();
+    settings.setValue("pageRowsNum", pageRowsNum);
     settings.endGroup();
 }
 
@@ -292,7 +322,7 @@ void MainWindow::on_openFileBtn_clicked()
                                                              m_desktopDir,
                                                              tr("Txt files (*.txt)"));
     if (!fileNameList.isEmpty()) {
-        if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 0) { // 文件分割
+        if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 0) { // 001-文件分割
             ui->stackedWidget->setCurrentIndex(0);
             ui->startBtn->setText(tr("开始分割"));
 
@@ -313,31 +343,41 @@ void MainWindow::on_openFileBtn_clicked()
                 statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
             }
         }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 1) { // 合并文本
-            QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
-            return;
-        }
-        else if (fileNameList.count() > 1) { // 合并文本
-            on_switchComboBox_currentIndexChanged(1);
-
-            QString mergeStr;
-            ui->textEdit->clear();
-            for (int i = 0; i < fileNameList.count(); ++i) {
-                mergeStr.append(fileNameList.at(i));
-                ui->textEdit->append(fileNameList.at(i));
-                if (i != fileNameList.count() - 1) {
-                    mergeStr.append(";");
-                }
+        else if (ui->stackedWidget->currentIndex() == 1) { // 002-合并文本
+            if (fileNameList.count() == 1) {
+                QMessageBox::warning(this, tr("提示"), tr("请选择或拖入多个文件用于合并！"));
+                return;
             }
-            ui->lineEdit_txt->setText(mergeStr);
+            else if (fileNameList.count() > 1) { // 合并文本
+                on_switchComboBox_currentIndexChanged(1);
 
-            statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
+                QString mergeStr;
+                ui->textEdit->clear();
+                for (int i = 0; i < fileNameList.count(); ++i) {
+                    mergeStr.append(fileNameList.at(i));
+                    ui->textEdit->append(fileNameList.at(i));
+                    if (i != fileNameList.count() - 1) {
+                        mergeStr.append(";");
+                    }
+                }
+                ui->lineEdit_txt->setText(mergeStr);
+
+                statusBar()->showMessage(tr("  共%1个文件").arg(fileNameList.count()));
+            }
         }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 2) { // 查找字串
+        else if (ui->stackedWidget->currentIndex() == 2) { // 003-查找字串
+            if (fileNameList.count() > 1) {
+                QMessageBox::warning(this, tr("提示"), tr("只支持单文件查找！"));
+                return;
+            }
             ui->lineEdit_txt->setText(fileNameList.at(0));
             ui->startBtn->setEnabled(true);
         }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 3) { // 生成序列文本
+        else if (ui->stackedWidget->currentIndex() == 3) { // 004-生成序列文本
+            if (fileNameList.count() > 1) {
+                QMessageBox::warning(this, tr("提示"), tr("文件数目太多啦！"));
+                return;
+            }
             ui->stackedWidget->setCurrentIndex(3);
             ui->startBtn->setText(tr("开始生成"));
 
@@ -359,12 +399,21 @@ void MainWindow::on_openFileBtn_clicked()
                 statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
             }
         }
-        else if (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 4) { // SQL文件解析
+        else if (ui->stackedWidget->currentIndex() == 4) { // 005-SQL文件解析
+            if (fileNameList.count() > 1) {
+                QMessageBox::warning(this, tr("提示"), tr("文件数目太多啦！"));
+                return;
+            }
             ui->lineEdit_txt->setText(fileNameList.at(0));
             ui->startBtn->setEnabled(true);
         }
-        else if ((fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 5) || // 逐行添加字符
-                 (fileNameList.count() == 1 && ui->stackedWidget->currentIndex() == 6)) { // 字段位置交换
+        else if ((ui->stackedWidget->currentIndex() == 5) || // 006-逐行添加字符
+                 (ui->stackedWidget->currentIndex() == 6)) { // 007-字段位置交换
+            if (fileNameList.count() > 1) {
+                QMessageBox::warning(this, tr("提示"), tr("文件数目太多啦！"));
+                return;
+            }
+
             ui->stackedWidget->setCurrentIndex(ui->stackedWidget->currentIndex());
             ui->startBtn->setText(tr("开始运行"));
 
@@ -386,11 +435,39 @@ void MainWindow::on_openFileBtn_clicked()
                 statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
             }
         }
+        else if (ui->stackedWidget->currentIndex() == 7) { // 008-卷装数据处理
+            if (fileNameList.count() > 1) {
+                QMessageBox::warning(this, tr("提示"), tr("文件数目太多啦！"));
+                return;
+            }
+
+            ui->stackedWidget->setCurrentIndex(7);
+            ui->startBtn->setText(tr("开始处理"));
+
+            ui->lineEdit_txt->setText(fileNameList.at(0));
+            ui->startBtn->setEnabled(true);
+
+            m_totalLines = calcTxtTotalLines(ui->lineEdit_txt->text());
+            QTime stopTime = QTime::currentTime();
+            long  elapsed  = m_startTime0.msecsTo(stopTime);
+            qDebug("calcTxtTotalLines use time: %ld ms", elapsed);
+
+            if (m_totalLines == 0 || m_totalLines == -1) {
+                QMessageBox::warning(this, tr("警告"), tr("该TXT文件为空或无法打开！"));
+                ui->lineEdit_txt->clear();
+                return;
+            }
+            else {
+                statusBar()->showMessage(tr("  文件共%1行").arg(m_totalLines));
+            }
+        }
     }
 }
 
 void MainWindow::on_startBtn_clicked()
 {
+    this->statusBar()->clearMessage();
+    m_isSplitOnly2File = ui->checkBox_isOnly2->isChecked();
     QTextCodec *codec	 = QTextCodec::codecForName("UTF8");
     QString    inputFile = ui->lineEdit_txt->text();
     if ((inputFile.isEmpty() || !inputFile.endsWith(".txt")) && (ui->stackedWidget->currentIndex() != 3)) {
@@ -399,58 +476,26 @@ void MainWindow::on_startBtn_clicked()
     }
 
     ui->startBtn->setEnabled(false);
-    // 文件分割
+    m_dealWithRollJob = false;
+
+    // 001-文件分割
     if (ui->stackedWidget->currentIndex() == 0) {
-        m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
-        int linesCount;
+        bool isSplitOnly2File = false;
+        int  linesCount;
         if (ui->specifyLinesRB->isChecked()) {//按行数分割
-            linesCount = ui->lineEdit_lineNum->text().toInt();
+            linesCount	     = ui->lineEdit_lineNum->text().toInt();
+            isSplitOnly2File = m_isSplitOnly2File;
         }
         else {// 平均分割
             //计算txt总行数，向前进位
             float docNum      = ui->lineEdit_docNum->text().toFloat();
             int	  perDocLines = ceil(m_totalLines / docNum);
-            linesCount = perDocLines == 0 ? 1 : perDocLines;
+            linesCount	     = perDocLines == 0 ? 1 : perDocLines;
+            isSplitOnly2File = false;
         }
-
-        m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
-        isDirExist(m_outDir);
-        if (m_outDir.trimmed().length() == 0) {
-            QString   inDir = ui->lineEdit_txt->text();
-            QFileInfo info(inDir);
-            m_outDir = info.absolutePath();
-        }
-
-        m_outDir = formatPath(m_outDir);
-        m_outDir.replace(QRegExp("/$"), "");
-        m_outDir += "/";
-        initOutputTxtDirs(m_outDir);
-
-        QFileInfo info(inputFile);
-        QString	  outFilename = info.baseName();
-
-        QString	   outputFullPathStr = m_outDir + outFilename;
-        QByteArray inputPathData, outputPathData;
-        inputPathData = inputFile.toLocal8Bit();
-        string intputFileString = string(inputPathData);
-        outputPathData = outputFullPathStr.toLocal8Bit();
-        string outputFileString = string(outputPathData);
-
-        m_splitterThread = new SplitterThread(NULL);
-        m_splitterThread->setInputFile(intputFileString);
-        m_splitterThread->setOutputFile(outputFileString);
-        m_splitterThread->setLinesCount(linesCount);
-
-        connect(m_splitterThread, SIGNAL(finished()), this, SLOT(splitThreadFinished()));
-        connect(m_splitterThread, &QThread::finished, m_splitterThread, &QObject::deleteLater);
-
-        if (m_splitterThread->isRunning()) {
-            return;
-        }
-        m_splitterThread->start();
-        m_startTime = QTime::currentTime();
+        splitTxtFile(inputFile, linesCount, isSplitOnly2File);
     }
-    else if (ui->stackedWidget->currentIndex() == 1) { // 文件合并
+    else if (ui->stackedWidget->currentIndex() == 1) { // 002-文件合并
         QStringList inputFiles = ui->textEdit->toPlainText().split("\n");
         qDebug() << inputFiles;
         m_startTime2	 = QTime::currentTime();
@@ -463,22 +508,19 @@ void MainWindow::on_startBtn_clicked()
         initOutputTxtDirs(m_outDir);
         QString outFilename	  = "mergeTxt.txt";
         QString outputFullPathStr = m_outDir + outFilename;
-        if (inputFiles.count() > 4 || inputFiles.count() < 2) {
-            QMessageBox::warning(this, tr("提示"), tr("请选择2~4个txt文件！"));
-            ui->startBtn->setEnabled(true);
-            return;
-        }
 
-        int intervalLinesNum  = ui->lineEdit_IntervalLinesNum->text().toInt();
-        int intervalLinesNum2 = ui->lineEdit_IntervalLinesNum_2->text().toInt();
-        mergeTxtFiles(inputFiles, outputFullPathStr, intervalLinesNum, intervalLinesNum2);
+        bool bIsMergeByLines	= ui->mergeLinesRB->isChecked();
+        bool bIsNotSameInterval = ui->checkBox_notSameInterval->isChecked();
+        int  intervalLinesNum	= ui->lineEdit_IntervalLinesNum->text().toInt();
+        int  intervalLinesNum2	= ui->lineEdit_IntervalLinesNum_2->text().toInt();
+        mergeTxtFiles(inputFiles, outputFullPathStr, bIsMergeByLines, bIsNotSameInterval, intervalLinesNum, intervalLinesNum2);
         ui->startBtn->setEnabled(true);
 
         QTime stopTime = QTime::currentTime();
         long  elapsed  = m_startTime2.msecsTo(stopTime);
         statusBar()->showMessage(tr("  合并耗时%1s").arg(elapsed * 0.001));
     }
-    else if (ui->stackedWidget->currentIndex() == 2) { // 字串查找
+    else if (ui->stackedWidget->currentIndex() == 2) { // 003-字串查找
         ui->label_result->clear();
         QString searchStr = ui->lineEdit_searchStr->text();
         if (searchStr.isEmpty()) {
@@ -537,7 +579,7 @@ void MainWindow::on_startBtn_clicked()
             statusBar()->showMessage(tr("  查询耗时%1s").arg(elapsed * 0.001));
         }
     }
-    else if (ui->stackedWidget->currentIndex() == 3) { // 生成序列文本
+    else if (ui->stackedWidget->currentIndex() == 3) { // 004-生成序列文本
         m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
         int linesCount;
         linesCount = ui->lineEdit_totalRows->text().toInt();
@@ -567,7 +609,7 @@ void MainWindow::on_startBtn_clicked()
         QString outputFullPathStr = m_outDir + outFilename;
         generateSerialIndexTxt(outputFullPathStr);
     }
-    else if (ui->stackedWidget->currentIndex() == 4) { // SQL文件解析
+    else if (ui->stackedWidget->currentIndex() == 4) { // 005-SQL文件解析
         m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
         int linesCount;
         m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
@@ -664,7 +706,7 @@ void MainWindow::on_startBtn_clicked()
         m_startTime = QTime::currentTime();
         ui->startBtn->setEnabled(true);
     }
-    else if (ui->stackedWidget->currentIndex() == 5) { // 逐行添加字符
+    else if (ui->stackedWidget->currentIndex() == 5) { // 006-逐行添加字符
         // 创建输出文件并打开
         m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
         m_outDir	 = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
@@ -712,9 +754,14 @@ void MainWindow::on_startBtn_clicked()
         }
         QString insertString = ui->lineEdit_strInsert->text();
 
+        bool isIndexFromEnd = ui->checkBox_IsFromEnd->isChecked();
+
         while (!stream.atEnd()) {
             line_in = stream.readLine();
             if ((!line_in.isEmpty())) {
+//                QString line_in_fix = QString(line_in).remove(0, 1);
+//                out << line_in_fix;
+//                out << "\n";
                 if (isSerialAppend) { // 追加序列号模式
                     out << line_in;
                     // 每行尾部要逐行追加的字符
@@ -736,7 +783,13 @@ void MainWindow::on_startBtn_clicked()
                         isError = true;
                         break;
                     }
-                    QString line_in_fix = QString(line_in).insert(indexPos, insertString); // TODO 索引越界校验
+                    QString line_in_fix;
+                    if (!isIndexFromEnd) {
+                        line_in_fix = QString(line_in).insert(indexPos, insertString);
+                    }
+                    else {
+                        line_in_fix = QString(line_in).insert(line_in.length() - indexPos, insertString);
+                    }
                     out << line_in_fix;
                     out << "\n";
                 }
@@ -754,8 +807,13 @@ void MainWindow::on_startBtn_clicked()
 
         ui->startBtn->setEnabled(true);
     }
-    else if (ui->stackedWidget->currentIndex() == 6) { // 字段位置交换
+    else if (ui->stackedWidget->currentIndex() == 6) { // 007-字段位置交换
         changeSourceLinePos(inputFile);
+    }
+    else if (ui->stackedWidget->currentIndex() == 7) { // 008-卷装数据处理
+        int linesCount = ui->lineEdit_singleRollNum->text().toInt();
+        m_dealWithRollJob = true;
+        splitTxtFile(inputFile, linesCount, false);
     }
 }
 
@@ -837,6 +895,76 @@ void MainWindow::changeSourceLinePos(QString inputFile)
     ui->startBtn->setEnabled(true);
 }
 
+void MainWindow::splitTxtFile(QString inputFile, int linesCount, bool isSplitOnly2File)
+{
+    m_createDateTime = QDateTime::currentDateTime().toString("yyyyMMddhhmmss");
+
+    m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/";
+    isDirExist(m_outDir);
+    if (m_outDir.trimmed().length() == 0) {
+        QString	  inDir = ui->lineEdit_txt->text();
+        QFileInfo info(inDir);
+        m_outDir = info.absolutePath();
+    }
+
+    m_outDir = formatPath(m_outDir);
+    m_outDir.replace(QRegExp("/$"), "");
+    m_outDir += "/";
+    initOutputTxtDirs(m_outDir);
+
+    QFileInfo info(inputFile);
+    QString   outFilename = info.baseName();
+
+    QString    outputFullPathStr = m_outDir + outFilename;
+    QByteArray inputPathData, outputPathData;
+    inputPathData = inputFile.toLocal8Bit();
+    string intputFileString = string(inputPathData);
+    outputPathData = outputFullPathStr.toLocal8Bit();
+    string outputFileString = string(outputPathData);
+
+    m_splitterThread = new SplitterThread(NULL);
+    m_splitterThread->setInputFile(intputFileString);
+    m_splitterThread->setOutputFile(outputFileString);
+    m_splitterThread->setLinesCount(linesCount);
+    m_splitterThread->setIsSplitOnly2File(isSplitOnly2File);
+
+    connect(m_splitterThread, SIGNAL(finished()), this, SLOT(splitThreadFinished()));
+    connect(m_splitterThread, &QThread::finished, m_splitterThread, &QObject::deleteLater);
+
+    if (m_splitterThread->isRunning()) {
+        return;
+    }
+    m_splitterThread->start();
+    m_startTime = QTime::currentTime();
+}
+
+///! 遍历分割文件夹得到处理文件列表
+//! \brief MainWindow::scanSplitTxtFold
+//! \param scanDirStr
+//! \return
+//!
+QStringList MainWindow::scanSplitTxtFold(const QString &scanDirStr)
+{
+    QStringList	  inputFiles;
+    QDir	  scanDir(scanDirStr);
+    QFileInfoList fileInfoList = scanDir.entryInfoList();
+    foreach(QFileInfo fileInfo, fileInfoList)
+    {
+        if (fileInfo.fileName() == "." || fileInfo.fileName() == "..") {
+            continue;
+        }
+
+        if (fileInfo.isDir()) {
+            continue;
+        }
+        else {
+            inputFiles.append(fileInfo.filePath());
+        }
+        QCoreApplication::processEvents();     // 防止界面假死
+    }
+    return (inputFiles);
+}
+
 QString MainWindow::formatPath(QString path)
 {
     QString   res = "";
@@ -858,9 +986,48 @@ void MainWindow::splitThreadFinished()
     QTime stopTime = QTime::currentTime();
     long  elapsed  = m_startTime.msecsTo(stopTime);
     qDebug("SplitTxtThread use time: %ld ms", elapsed);
+    qDebug() << "****m_splitterThread->isRunning() " << m_splitterThread->isRunning();
 
     QFileInfoList list = GetAllFileList(QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "/");
     statusBar()->showMessage(tr("  文件共%1行，分割成%2个文件，耗时%3s").arg(m_totalLines).arg(list.count()).arg(elapsed / 1000.0));
+    if (m_dealWithRollJob) {
+        doDealWithRollJob();
+    }
+    ui->startBtn->setEnabled(true);
+}
+
+void MainWindow::doDealWithRollJob()
+{
+    qDebug() << QString(__FUNCTION__);
+    // 每N个文件隔行合并成一个
+    int		pageRowsNum = ui->lineEdit_pageRowsNum->text().toInt();
+    QStringList inputFiles  = scanSplitTxtFold(m_outDir);
+    m_outDir = QApplication::applicationDirPath() + "/txtout/" + m_createDateTime + "_IM/";
+    isDirExist(m_outDir);
+    m_outDir = formatPath(m_outDir);
+    m_outDir.replace(QRegExp("/$"), "");
+    m_outDir += "/";
+    initOutputTxtDirs(m_outDir);
+
+    for (int index = 0; index < inputFiles.count(); index += pageRowsNum) {
+        int	fileNameIndex	  = index / pageRowsNum + 1;
+        QString outFilename	  = QString("IntervalMergeTxt_%1.txt").arg(fileNameIndex);
+        QString outputFullPathStr = m_outDir + outFilename;
+
+        bool	    bIsMergeByLines    = true;
+        bool	    bIsNotSameInterval = false;
+        int	    intervalLinesNum   = 1;
+        QStringList mergeTxtFileList;
+        mergeTxtFileList.clear();
+        for (int rowCount = 0; rowCount < pageRowsNum; ++rowCount) {
+            mergeTxtFileList.append(inputFiles.at(index + rowCount));
+        }
+
+        qDebug() << "***mergeTxtFileList " << mergeTxtFileList;
+        mergeTxtFiles(mergeTxtFileList, outputFullPathStr, bIsMergeByLines, bIsNotSameInterval, intervalLinesNum);
+    }
+
+    QMessageBox::information(NULL, "提示", "卷装数据处理完成！");
     ui->startBtn->setEnabled(true);
 }
 
@@ -943,168 +1110,97 @@ int MainWindow::getLineNumInTxt(QString searchStr)
     return (targetIndex);
 }
 
+///!
+//! \brief MainWindow::mergeTxtFiles
+//! \param fileList
+//! \param outFilePath
+//! \param bIsMergeByLines
+//! \param bIsNotSameInterval
+//! \param intervalLinesNum 隔行数目 默认1
+//! \param intervalLinesNum2
+//!
 void MainWindow::mergeTxtFiles(QStringList fileList, QString outFilePath,
+                               bool bIsMergeByLines, bool bIsNotSameInterval,
                                int intervalLinesNum, int intervalLinesNum2)
 {
     QFile outFile(outFilePath);
     outFile.open(QIODevice::WriteOnly | QIODevice::Text);
     QTextStream aStream(&outFile);
 
-    QByteArray	tempData1; //最多可存储2147483647个字节 (< 2G)
-    QByteArray	tempData2;
-    QByteArray	tempData3;
-    QByteArray	tempData4;
-    QStringList line_all1;
-    QStringList line_all2;
-    QStringList line_all3;
-    QStringList line_all4;
+    QFile inputFile;
+    //最多可存储2147483647个字节 (< 2G)
+    QByteArray tempData;
+    QVector <QVector <QString> > dataArray;
+    for (int index = 0; index < fileList.count(); ++index) {
+        inputFile.setFileName(fileList.at(index));
+        inputFile.open(QIODevice::ReadOnly | QIODevice::Text);
+        tempData = inputFile.readAll();
+        inputFile.close();
+        QStringList lineAll = QString(tempData).split("\n");
 
-    // 间隔1行，交错插入
-    QFile inputFile1, inputFile2, inputFile3, inputFile4;
-
-    inputFile1.setFileName(fileList.at(0));
-    inputFile1.open(QIODevice::ReadOnly | QIODevice::Text);
-    tempData1 = inputFile1.readAll();
-    line_all1 = QString(tempData1).split("\n");
-    inputFile1.close();
-
-    if (fileList.count() > 1) {
-        inputFile2.setFileName(fileList.at(1));
-        inputFile2.open(QIODevice::ReadOnly | QIODevice::Text);
-        tempData2 = inputFile2.readAll();
-        line_all2 = QString(tempData2).split("\n");
-        inputFile2.close();
-    }
-
-    if (fileList.count() > 2) {
-        inputFile3.setFileName(fileList.at(2));
-        inputFile3.open(QIODevice::ReadOnly | QIODevice::Text);
-        tempData3 = inputFile3.readAll();
-        line_all3 = QString(tempData3).split("\n");
-        inputFile3.close();
-    }
-
-    if (fileList.count() > 3) {
-        inputFile4.setFileName(fileList.at(3));
-        inputFile4.open(QIODevice::ReadOnly | QIODevice::Text);
-        tempData4 = inputFile4.readAll();
-        line_all4 = QString(tempData4).split("\n");
-        inputFile4.close();
-    }
-
-    if (ui->mergeLinesRB->isChecked()) {             // 间隔指定行数合并
-        if (!ui->checkBox_asymmetric->isChecked()) { // 对称交替合并
-            for (int i = 0; i < line_all1.count(); i += intervalLinesNum) {
-                for (int j1 = 0; j1 < intervalLinesNum; ++j1) {
-                    if (line_all1.count() > i + j1) {
-                        aStream << line_all1.at(i + j1);
-                    }
-                    aStream << "\n";
-                }
-
-                if (fileList.count() > 1 && line_all2.count() > i) {
-                    for (int j2 = 0; j2 < intervalLinesNum; ++j2) {
-                        if (line_all2.count() > i + j2) {
-                            aStream << line_all2.at(i + j2);
-                        }
-                        aStream << "\n";
-                    }
-                }
-
-                if (fileList.count() > 2 && line_all3.count() > i) {
-                    for (int j3 = 0; j3 < intervalLinesNum; ++j3) {
-                        if (line_all3.count() > i + j3) {
-                            aStream << line_all3.at(i + j3);
-                        }
-                        aStream << "\n";
-                    }
-                }
-
-                if (fileList.count() > 3 && line_all4.count() > i) {
-                    for (int j4 = 0; j4 < intervalLinesNum; ++j4) {
-                        if (line_all4.count() > i + j4) {
-                            aStream << line_all4.at(i + j4);
-                        }
-                        aStream << "\n";
-                    }
-                }
-                QCoreApplication::processEvents(); // 防止界面假死
-            }
+        QVector <QString> temp;
+        foreach(QString lineStr, lineAll)
+        {
+            temp.append(lineStr); // 5k
         }
-        else { // 非对称交替合并 只支持两个文件合并
-            if (fileList.count() != 2) {
-                QMessageBox::warning(this, tr("错误"), tr("非对称交替合并功能只适用于两个文件的合并"));
-                return;
-            }
+        dataArray.append(temp);   // 7
+    }
 
-            if ((line_all1.count() * 1.0 / intervalLinesNum) >= (line_all2.count() * 1.0 / intervalLinesNum2)) {
-                for (int i = 0; i < line_all1.count(); i += intervalLinesNum) {
-                    for (int j1 = 0; j1 < intervalLinesNum; ++j1) {
-                        if (line_all1.count() > i + j1) {
-                            aStream << line_all1.at(i + j1);
+    if (bIsMergeByLines) {
+        if (!bIsNotSameInterval) { // 隔指定行合并 【所有文件需行数相同】
+            int fileIndex;
+            int lineIndex;
+            // 180度旋转，依旧要从左上角001开始【颠倒的】
+            if (1 /*reverse*/) {
+                int numPerRow = 21;
+                for (lineIndex = 0; lineIndex < dataArray[0].size(); lineIndex += numPerRow) {
+                    for (int j = 0; j < numPerRow; ++j) {
+                        for (fileIndex = 0; fileIndex < dataArray.size(); ++fileIndex) {
+                            int reverseFileIndex = dataArray.size() - 1 - fileIndex;
+                            int reverseLineIndex = 21 * (lineIndex / 21 + 1) - 1 - j;
+                            if (reverseLineIndex >= dataArray[0].size()) {
+                                continue;
+                            }
+                            else {
+                                if (!dataArray[reverseFileIndex][reverseLineIndex].isEmpty()) {
+                                    aStream << dataArray[reverseFileIndex][reverseLineIndex];
+                                    aStream << "\n";
+                                }
+                            }
                         }
-                        aStream << "\n";
                     }
-
-                    if (fileList.count() > 1) {
-                        int mIndex = i / intervalLinesNum * intervalLinesNum2;
-                        for (int j2 = 0; j2 < intervalLinesNum2; ++j2) {
-                            if (line_all2.count() > mIndex + j2) {
-                                aStream << line_all2.at(mIndex + j2);
+                }
+            }
+            else {
+                for (lineIndex = 0; lineIndex < dataArray[0].size(); lineIndex += intervalLinesNum) { // 5k
+                    for (fileIndex = 0; fileIndex < dataArray.size(); ++fileIndex) {                  // 7
+                        for (int j = 0; j < intervalLinesNum; ++j) {
+                            if (dataArray[fileIndex].size() > lineIndex + j) {
+                                aStream << dataArray[fileIndex][lineIndex + j];
                             }
                             aStream << "\n";
                         }
                     }
                 }
             }
-            else { // 文件2需循环更多次
-                for (int i = 0; i < line_all2.count(); i += intervalLinesNum2) {
-                    int mIndex = i / intervalLinesNum2 * intervalLinesNum;
-                    for (int j1 = 0; j1 < intervalLinesNum; ++j1) {
-                        if (line_all1.count() > mIndex + j1) {
-                            aStream << line_all1.at(mIndex + j1);
-                        }
-                        aStream << "\n";
-                    }
 
-                    if (fileList.count() > 1) {
-                        for (int j2 = 0; j2 < intervalLinesNum2; ++j2) {
-                            if (line_all2.count() > i + j2) {
-                                aStream << line_all2.at(i + j2);
-                            }
-                            aStream << "\n";
-                        }
-                    }
-                }
-            }
             QCoreApplication::processEvents(); // 防止界面假死
         }
+        else {                                 // 两文件分别指定不同间隔行
+            if (fileList.count() != 2) {
+                QMessageBox::warning(this, tr("提示"), tr("仅针对两个文件有效！"));
+                return;
+            }
+            QCoreApplication::processEvents();
+        }
     }
-    else if (ui->mergeAllRB->isChecked()) { // 衔尾合并
-        aStream << tempData1;
-        aStream << "\n";
-
-        // 间隔取值，去重
-        //        for (int i = 0; i < line_all1.count(); i += 30) {
-        //            aStream << line_all1.at(i);
-        //            aStream << "\n";
-        //        }
-
-        if (fileList.count() > 1) {
-            aStream << tempData2;
-            aStream << "\n";
+    else { // 衔尾合并
+        for (int fileIndex = 0; fileIndex < fileList.count(); ++fileIndex) {
+            for (int lineIndex = 0; lineIndex < dataArray[fileIndex].size(); ++lineIndex) {
+                aStream << dataArray[fileIndex][lineIndex];
+                aStream << "\n";
+            }
         }
-
-        if (fileList.count() > 2) {
-            aStream << tempData3;
-            aStream << "\n";
-        }
-
-        if (fileList.count() > 3) {
-            aStream << tempData4;
-            aStream << "\n";
-        }
-        QCoreApplication::processEvents(); // 防止界面假死
     }
 
     outFile.close();
@@ -1134,7 +1230,7 @@ void MainWindow::generateSerialIndexTxt(QString fileName)
     QString suffixStr = ui->lineEdit_suffix->text();
 
     if (isHasProductID && serialLength < 7) {
-        QMessageBox::warning(this, tr("错误"), tr("有产品编号批次时，序列号长度必须大于7！"));
+        QMessageBox::warning(this, tr("错误"), tr("有产品编号批次时，序列号长度必须大于等于7！"));
         ui->startBtn->setEnabled(true);
         return;
     }
@@ -1153,15 +1249,29 @@ void MainWindow::generateSerialIndexTxt(QString fileName)
                     aStream << productIDStr + QString("%1").arg(startIndex, serialLength - 6, 10, QLatin1Char('0')) + suffixStr;
                 }
                 else {
+                    // 追加特殊后缀
+//                    bool isAddSerialNums = true;
+//                    if (isAddSerialNums) {
+//                        suffixStr = QString("%1,%2").arg((startIndex - 1) * 5000 + 1, 7, 10, QLatin1Char('0')).arg(startIndex * 5000, 7, 10, QLatin1Char('0'));
+//                    }
+//                    aStream << /*QString("  ||  %1").arg(startIndex, serialLength, 10, QLatin1Char('0')) + */ suffixStr;
+
+
                     aStream << QString("%1").arg(startIndex, serialLength, 10, QLatin1Char('0')) + suffixStr;
                 }
             }
 
             aStream << "\n";
+
             rowNum++;
         }
         if (rowNum % interalCount == 0) {
-            startIndex++;
+            if (m_isSerialReverse) {
+                startIndex--;
+            }
+            else {
+                startIndex++;
+            }
         }
     }while (rowNum < totalRowsNum);
 
@@ -1309,7 +1419,7 @@ void MainWindow::on_lineEdit_IntervalLinesNum_textEdited(const QString &text)
 }
 
 // 非对称合并
-void MainWindow::on_checkBox_asymmetric_stateChanged(int state)
+void MainWindow::on_checkBox_notSameInterval_stateChanged(int state)
 {
     ui->widget_asymmetric->setVisible(state);
 }
@@ -1342,4 +1452,19 @@ void MainWindow::on_comboBox_dataParts_currentIndexChanged(int index)
     }
 
     ui->comboBox_placePos->addItems(lineInList);
+}
+
+void MainWindow::on_checkBox_IsFromEnd_stateChanged(int state)
+{
+    m_isIndexFromEnd = !(state == 0);
+}
+
+void MainWindow::on_checkBox_isReverse_stateChanged(int state)
+{
+    m_isSerialReverse = (state != 0);
+}
+
+void MainWindow::on_checkBox_isOnly2_stateChanged(int state)
+{
+    m_isSplitOnly2File = (state != 0);
 }

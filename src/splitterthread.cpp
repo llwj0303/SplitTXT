@@ -13,7 +13,8 @@ SplitterThread::SplitterThread(QObject *parent) :
 {
 }
 
-void SplitterThread::run() {
+void SplitterThread::run()
+{
     std::ifstream textFile(inputFile.c_str(), ios::binary | ios::in);
     if (!textFile.is_open()) {
         qFatal("SplitterThread cannot open file");
@@ -24,8 +25,8 @@ void SplitterThread::run() {
 
     char buf[2];
     textFile.read(buf, 2);
-    unsigned char b0 = (unsigned char) buf[0];
-    unsigned char b1 = (unsigned char) buf[1];
+    unsigned char b0 = (unsigned char)buf[0];
+    unsigned char b1 = (unsigned char)buf[1];
 
     if ((b0 == 0xFF && b1 == 0xFE) || (b0 != 0x00 && b1 == 0x00)) {
         enc = ENC_UTF16_LE;
@@ -37,31 +38,32 @@ void SplitterThread::run() {
 
     stopThread = false;
     bool finish = false;
-    int txtNum = 1;
-    int lines = 0;
+    int	 txtNum = 1;
+    int	 lines	= 0;
 
     char c0;
 
-    while(textFile.peek() != EOF) {
+    while (textFile.peek() != EOF) {
         QMutexLocker locker(&m_lock);
-        if (stopThread)
+        if (stopThread) {
             return;
+        }
 
         lines = 0;
         QString txtIndexStr = "";
-        txtIndexStr = txtIndexStr.sprintf("%03d", txtNum++);
-        string outputFullFileName = outputFile + "_sp" + txtIndexStr.toStdString() + ".txt";
+        txtIndexStr = txtIndexStr.sprintf("%04d", txtNum++);
+        string	outputFullFileName = outputFile + "_sp" + txtIndexStr.toStdString() + ".txt";
         fstream outFile(outputFullFileName.c_str(), ios::binary | ios::out);
         if (!outFile.is_open()) {
             qFatal("outputTxtFile cannot open file");
             return;
         }
 
-        //第一个文件txtNum++后是2
-        if(txtNum == 2 && 0/*ConfigApp::bIsHasTxtHead*/)
-        {
-            realLinesCount = linesCount + 1;
-        }else{
+        //第一个文件txtNum++后是2 第二个文件是3
+        if (txtNum == 3 && m_isSplitOnly2File) {
+            realLinesCount = 1000000000; // 相当于无限大
+        }
+        else {
             realLinesCount = linesCount;
         }
 
@@ -79,7 +81,7 @@ void SplitterThread::run() {
                 break;
             }
 
-            if (c0 == 0x0a) {
+            if (c0 == 0x0a) { // 0x0a是二进制模式下的回车标识(0x0D0x0A)
                 if (enc == ENC_UTF16_LE) {
                     textFile.read(&c0, 1);
                     outFile.write(&c0, 1);
@@ -89,7 +91,10 @@ void SplitterThread::run() {
             }
         }
 
-        if (finish) break;
+        if (finish) {
+            realLinesCount = 0;
+            break;
+        }
         outFile.close();
     }
 

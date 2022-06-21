@@ -1,6 +1,6 @@
 ﻿#ifndef SPLITTERTHREAD_H
 #define SPLITTERTHREAD_H
-// 用git bash 分割是真的快，就是不知道有没有办法使用到该程序
+// 用git bash 分割是真的快，就是不知道有没有办法找到该源码
 #include <QThread>
 #include <QDebug>
 #include <QMutex>
@@ -27,16 +27,24 @@ public:
     void run();
 
 
-    void setInputFile(string inputFile) {
+    void setInputFile(string inputFile)
+    {
         this->inputFile = inputFile;
     }
 
-    void setOutputFile(string outputFile) {
+    void setOutputFile(string outputFile)
+    {
         this->outputFile = outputFile;
     }
 
-    void setLinesCount(int linesCount) {
+    void setLinesCount(int linesCount)
+    {
         this->linesCount = linesCount;
+    }
+
+    void setIsSplitOnly2File(bool isSplitOnly2File)
+    {
+        this->m_isSplitOnly2File = isSplitOnly2File;
     }
 
 private:
@@ -48,12 +56,12 @@ private:
     QMutex m_lock;
     bool stopThread;
     bool m_isFirstTxt;
+    bool m_isSplitOnly2File;
 
 signals:
 
 public slots:
     void stopImmediately();
-
 };
 
 #endif // SPLITTERTHREAD_H
